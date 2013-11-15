@@ -11,14 +11,14 @@
 # information you'd like us to know, please add it at the end of the file.
 
 # Partner 1
-Name: 
-Student ID: 
-Email: 
+Name: James Danylik 
+Student ID: 403548957
+Email: james.danylik@gmail.com
 
 # Partner 2 (if you're working in a team)
-Name: 
-Student ID: 
-Email: 
+Name: Zhaoying Yao
+Student ID: 803696465
+Email: zhoaflyaway1015@gmail.com
 
 # Extra credit problems
 #Extra credit problem: none
