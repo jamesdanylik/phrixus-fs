@@ -452,7 +452,8 @@ ospfs_dir_readdir(struct file *filp, void *dirent, filldir_t filldir)
 		 * the loop.  For now we do this all the time.
 		 *
 		 * EXERCISE: Your code here */
-		r = 1;		/* Fix me! */
+		
+        r = 1;		/* Fix me! */
 		break;		/* Fix me! */
 
 		/* Get a pointer to the next entry (od) in the directory.
@@ -553,7 +554,18 @@ static uint32_t
 allocate_block(void)
 {
 	/* EXERCISE: Your code here */
-	return 0;
+
+    for (uint32_t i=0; i < ospfs_super->os_nblocks; i++)
+    {
+        if (bitvector_test(ospfs_block(OSPFS_FREEMAP_BLK), i)== 1) {
+            bitvector_clear(ospfs_block(OSPFS_FREEMAP_BLK), i);
+            return i;
+            
+        }
+        
+    }
+    
+    return 0;
 }
 
 
@@ -572,6 +584,13 @@ static void
 free_block(uint32_t blockno)
 {
 	/* EXERCISE: Your code here */
+    
+    //only datablocks can be freed. Block number must be in the range of (first-inode-block+number of blocks for inodes) and (N).
+    if (blockno < (ospfs_super->os_nblocks) && blockno > (os_firstinob + ospfs_super->os_ninodes/OSPFS_BLKINODES)) {
+        bitvector_set(ospfs_block(OSPFS_FREEMAP_BLK), blockno);
+    }
+    
+    
 }
 
 
@@ -1228,6 +1247,6 @@ module_init(init_ospfs_fs)
 module_exit(exit_ospfs_fs)
 
 // Information about the module
-MODULE_AUTHOR("James Danylik & Zhaoying Yao");
+MODULE_AUTHOR("Skeletor");
 MODULE_DESCRIPTION("OSPFS");
 MODULE_LICENSE("GPL");
