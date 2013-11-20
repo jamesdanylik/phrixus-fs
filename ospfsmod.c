@@ -453,8 +453,13 @@ ospfs_dir_readdir(struct file *filp, void *dirent, filldir_t filldir)
 		 *
 		 * EXERCISE: Your code here */
 		
-        r = 1;		/* Fix me! */
-		break;		/* Fix me! */
+	 	// We should only really do this if we're at the end of the
+		// directory
+		if ( f_pos-2 >= dir_oi->oi_size-1 )
+		{
+        	r = 1; 
+			break;
+		}
 
 		/* Get a pointer to the next entry (od) in the directory.
 		 * The file system interprets the contents of a
@@ -477,6 +482,41 @@ ospfs_dir_readdir(struct file *filp, void *dirent, filldir_t filldir)
 		 */
 
 		/* EXERCISE: Your code here */
+
+		od = ospfs_ionode_data( dir_oi, f_pos-2);
+		entry_oi = ospfs_ionode( od->od_ino );
+
+		if ( entry_oi == 0 )
+			return -EIO;
+
+		if ( od->od_ino == 0 )
+		{
+			f_pos += sizeof( ospfs_direntry_t );
+			continue;
+		}
+
+		int length = -1;
+		while (length++, length < OSPFS_MAXNAMELEN + 1 )
+		{
+			if ( od->od_name[length] == '\0' )
+				break;
+		}
+		length++;
+
+		int type;
+		switch(entry_oi->oi_ftype)
+		{
+			case OSPFS_FTYPE_REG:
+				type = DT_REG; break;
+			case OSPFS_FTYPE_DIR:
+				type = DT_DIR; break;
+			case OSPFS_FTYPE_SYMLINK:
+		}		type = DT_LNK; break;
+
+		ok_so_far = filldir( dirent, od->od_name, length, f_pos, od->od_ino, type);
+		if ( ok_so_far )
+			f_pos += sizeof(ospfs_direntry_t);
+
 	}
 
 	// Save the file position and return!
