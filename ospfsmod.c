@@ -1305,7 +1305,30 @@ create_blank_direntry(ospfs_inode_t *dir_oi)
 	//    entries and return one of them.
 
 	/* EXERCISE: Your code here. */
-	return ERR_PTR(-EINVAL); // Replace this line
+	int ret = 0;
+	int f_pos = 0;
+	ospfs_direntry_t *od;
+	int found = 0;
+
+	for ( od = ospfs_inode_data( dir_oi, f_pos ); f_pos < dir_oi->oi_size; f_pos += sizeof( ospfs_direntry_t ))
+	{
+		od = ospfs_inode_data( dir_oi, f_pos );
+        if ( od->od_ino == 0 )
+        {
+            found = 1;
+            break;
+        }
+	}
+
+	if ( !found )
+	{
+		ret = add_block( dir_oi);
+		if ( ret != 0 )
+			return ERR_PTR(ret);
+		od = ospfs_inode_data( dir_oi, f_pos);
+	} 
+
+	return od;
 }
 
 // ospfs_link(src_dentry, dir, dst_dentry
