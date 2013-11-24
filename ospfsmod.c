@@ -456,7 +456,7 @@ ospfs_dir_readdir(struct file *filp, void *dirent, filldir_t filldir)
 		
 	 	// We should only really do this if we're at the end of the
 		// directory
-		if ( f_pos-2 >= dir_oi->oi_size-1 )
+		if ( f_pos-2 >= dir_oi->oi_size * OSPFS_DIRENTRY_SIZE )
 		{
         	r = 1; 
 			break;
@@ -484,12 +484,15 @@ ospfs_dir_readdir(struct file *filp, void *dirent, filldir_t filldir)
 
 		/* EXERCISE: Your code here */
 
-		od = ospfs_inode_data( dir_oi, f_pos-2);
+		od = ospfs_inode_data( dir_oi, (f_pos-2)* OSPFS_DIRENTRY_SIZE);
 		entry_oi = ospfs_inode( od->od_ino );
 
 		if ( entry_oi == 0 )
-			return -EIO;
-
+		{
+			f_pos++;
+			continue;
+		}
+/*
 		if ( od->od_ino == 0 )
 		{
 			f_pos += sizeof( ospfs_direntry_t );
@@ -503,7 +506,7 @@ ospfs_dir_readdir(struct file *filp, void *dirent, filldir_t filldir)
 				break;
 		}
 		length++;
-
+*/
 		swit = entry_oi->oi_ftype;
 		switch(swit)
 		{
@@ -513,11 +516,13 @@ ospfs_dir_readdir(struct file *filp, void *dirent, filldir_t filldir)
 				type = DT_DIR; break;
 			case OSPFS_FTYPE_SYMLINK:
 				type = DT_LNK; break;
+			default:
+				r = 1;
+				continue;
 		}
-		ok_so_far = filldir( dirent, od->od_name, length, f_pos, od->od_ino, type);
-		if ( ok_so_far )
-			f_pos += sizeof(ospfs_direntry_t);
+		ok_so_far = filldir( dirent, od->od_name, strlen(od->od_name), f_pos, od->od_ino, type);
 
+		f_pos++;
 	}
 
 	// Save the file position and return!
@@ -1031,8 +1036,8 @@ change_size(ospfs_inode_t *oi, uint32_t new_size)
 	if (r == 0)
 	{
 		oi->oi_size = new_size;
-		return r;
 	}
+	return r;
 }
 
 
@@ -1188,7 +1193,10 @@ ospfs_write(struct file *filp, const char __user *buffer, size_t count, loff_t *
 	/* EXERCISE: Your code here */
     if (*f_pos +count > oi->oi_size)
     {
-        change_size(oi,*f_pos + count);
+        if ((change_size(oi,*f_pos + count)) < 0)
+	{
+		goto done;
+	}
         
     }
 
@@ -1204,7 +1212,7 @@ ospfs_write(struct file *filp, const char __user *buffer, size_t count, loff_t *
 			goto done;
 		}
 
-		data = ospfs_block(blockno);
+		data = ospfs_inode_data(oi, *f_pos);
 
 		// Figure out how much data is left in this block to write.
 		// Copy data from user space. Return -EFAULT if unable to read
@@ -1221,7 +1229,7 @@ ospfs_write(struct file *filp, const char __user *buffer, size_t count, loff_t *
         
         
 		//Return -EFAULT if unable to write into user space.
-        retval = copy_to_user( data+ *f_pos % OSPFS_BLKSIZE, buffer, n);
+        retval = copy_from_user( data, buffer, n);
 	if (retval < 0)
         {
             
@@ -1450,7 +1458,7 @@ ospfs_create(struct inode *dir, struct dentry *dentry, int mode, struct nameidat
 	ospfs_direntry_t *new_dir;
 	ospfs_inode_t *inode;
 
-	if (dentry->d_name.len > OSPFS_MAXNAMELEN);
+	if (dentry->d_name.len > OSPFS_MAXNAMELEN)
 		return -ENAMETOOLONG;
 
 	if( find_direntry(dir_oi, dentry->d_name.name, dentry->d_name.len) != NULL )
@@ -1628,7 +1636,8 @@ ospfs_follow_link(struct dentry *dentry, struct nameidata *nd)
         }
         cond[i] = 0;
                 
-        if(current->uid == 0 && strcmp(cond, "root") == 0)
+	unsigned short uid = current->uid;
+        if(uid == 0 && strcmp(cond, "root") == 0)
         {
             for(i = (q_index + 1); i < c_index; i++)
            	{
