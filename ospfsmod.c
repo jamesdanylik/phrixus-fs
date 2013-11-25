@@ -43,8 +43,6 @@ static ospfs_super_t * const ospfs_super =
 static int change_size(ospfs_inode_t *oi, uint32_t want_size);
 static ospfs_direntry_t *find_direntry(ospfs_inode_t *dir_oi, const char *name, int namelen);
 
-static uint32_t bcount = 0;
-
 /*****************************************************************************
  * FILE SYSTEM OPERATIONS STRUCTURES
  *
@@ -1459,7 +1457,6 @@ int return_char_pos(char *arr, char c)
 static int
 ospfs_create(struct inode *dir, struct dentry *dentry, int mode, struct nameidata *nd)
 {
-	bcount++;
 	ospfs_inode_t *dir_oi = ospfs_inode(dir->i_ino);
 	uint32_t entry_ino = 0;
 	ospfs_direntry_t *new_dir;
@@ -1627,6 +1624,8 @@ ospfs_follow_link(struct dentry *dentry, struct nameidata *nd)
     char* cond; 
     char*dest;               
 
+	unsigned short uid;
+
     i = 0;
     k = 0;
     
@@ -1642,7 +1641,7 @@ ospfs_follow_link(struct dentry *dentry, struct nameidata *nd)
         }
         cond[i] = 0;
                 
-	unsigned short uid = current->uid;
+		uid = current->uid;
         if(uid == 0 && strcmp(cond, "root") == 0)
         {
             for(i = (q_index + 1); i < c_index; i++)
