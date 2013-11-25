@@ -1460,7 +1460,6 @@ static int
 ospfs_create(struct inode *dir, struct dentry *dentry, int mode, struct nameidata *nd)
 {
 	bcount++;
-	eprintk("we have used %u blocks\n", ospfs_super->os_nblocks, bcount);
 	ospfs_inode_t *dir_oi = ospfs_inode(dir->i_ino);
 	uint32_t entry_ino = 0;
 	ospfs_direntry_t *new_dir;
