@@ -43,6 +43,7 @@ static ospfs_super_t * const ospfs_super =
 static int change_size(ospfs_inode_t *oi, uint32_t want_size);
 static ospfs_direntry_t *find_direntry(ospfs_inode_t *dir_oi, const char *name, int namelen);
 
+static uint32_t bcount = 0;
 
 /*****************************************************************************
  * FILE SYSTEM OPERATIONS STRUCTURES
@@ -783,6 +784,7 @@ add_block(ospfs_inode_t *oi)
 	alloc_block_number = allocate_block();
 	if (alloc_block_number == 0)
 	{
+		eprintk("alloc_block_number fail\n");
 		return -ENOSPC;
 	}
 	alloc_block = ospfs_block(alloc_block_number);
@@ -801,6 +803,7 @@ add_block(ospfs_inode_t *oi)
         alloc_ind = allocate_block();
         if (alloc_ind == 0) {
 		free_block(alloc_block_number);
+		eprintk("alloc_ind fail\n");
             return -ENOSPC;
         }
         
@@ -818,7 +821,7 @@ add_block(ospfs_inode_t *oi)
     }
     
     // 1024/4 +10 > n > 10, 
-    else if (n > OSPFS_NDIRECT && n < OSPFS_NDIRECT + OSPFS_NINDIRECT )
+    else if (n < OSPFS_NDIRECT + OSPFS_NINDIRECT )
     {
         ind_block = ospfs_block(oi->oi_indirect);
         ind_block[direct_index(n)]= alloc_block_number;
@@ -830,6 +833,7 @@ add_block(ospfs_inode_t *oi)
         alloc_ind2 = allocate_block();
         if (alloc_ind2 == 0) {
 		free_block(alloc_block_number);
+		eprintk("alloc_ind2 fail\n");
             return -ENOSPC;
         }
 
@@ -837,6 +841,7 @@ add_block(ospfs_inode_t *oi)
         if (alloc_ind == 0) {
 		free_block(alloc_block_number);
 		free_block(alloc_ind2);
+		eprintk("alloc_ind fail\n");
             return -ENOSPC;
         }
  
@@ -869,6 +874,7 @@ add_block(ospfs_inode_t *oi)
             alloc_ind = allocate_block();
             if (alloc_ind == 0) {
 		free_block(alloc_block_number);
+		eprintk("alloc_ind fail\n");
                 return -ENOSPC;
             }
             ind_block = ospfs_block(alloc_ind);
@@ -884,13 +890,13 @@ add_block(ospfs_inode_t *oi)
             ind_block[nth_ind] = alloc_block_number;
         }
     }
-	// full
+	// inode full
 	else 
 	{
 		free_block (alloc_block_number);
-		return -ENOSPC;
+		return -EIO;
 	}
-	
+	oi->oi_size = (n+1) * OSPFS_BLKSIZE;	
 	return 0;
     
 }
@@ -1453,6 +1459,8 @@ int return_char_pos(char *arr, char c)
 static int
 ospfs_create(struct inode *dir, struct dentry *dentry, int mode, struct nameidata *nd)
 {
+	bcount++;
+	eprintk("we have used %u blocks\n", ospfs_super->os_nblocks, bcount);
 	ospfs_inode_t *dir_oi = ospfs_inode(dir->i_ino);
 	uint32_t entry_ino = 0;
 	ospfs_direntry_t *new_dir;
@@ -1499,16 +1507,11 @@ ospfs_create(struct inode *dir, struct dentry *dentry, int mode, struct nameidat
 	memcpy(new_dir->od_name, dentry->d_name.name, dentry->d_name.len);
 	new_dir->od_name[dentry->d_name.len] = 0;
 
-	/* Execute this code after your function has successfully created the
-	   file.  Set entry_ino to the created file's inode number before
-	   getting here. */
-	{
-		struct inode *i = ospfs_mk_linux_inode(dir->i_sb, entry_ino);
-		if (!i)
-			return -ENOMEM;
-		d_instantiate(dentry, i);
-		return 0;
-	}
+	struct inode *i = ospfs_mk_linux_inode(dir->i_sb, entry_ino);
+	if (!i)
+		return -ENOMEM;
+	d_instantiate(dentry, i);
+	return 0;
 }
 
 
