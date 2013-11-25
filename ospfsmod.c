@@ -1459,13 +1459,14 @@ int return_char_pos(char *arr, char c)
 static int
 ospfs_create(struct inode *dir, struct dentry *dentry, int mode, struct nameidata *nd)
 {
-	bcount++;
-	eprintk("we have used %u blocks\n", ospfs_super->os_nblocks, bcount);
 	ospfs_inode_t *dir_oi = ospfs_inode(dir->i_ino);
 	uint32_t entry_ino = 0;
 	ospfs_direntry_t *new_dir;
 	ospfs_inode_t *inode;
 	struct inode *i;
+
+	bcount++;
+        eprintk("we have used %u blocks and have bcount %u\n", ospfs_super->os_nblocks, bcount);
 
 	if (dentry->d_name.len > OSPFS_MAXNAMELEN)
 		return -ENAMETOOLONG;
@@ -1628,6 +1629,8 @@ ospfs_follow_link(struct dentry *dentry, struct nameidata *nd)
     char* cond; 
     char*dest;               
 
+	unsigned short uid;
+
     i = 0;
     k = 0;
     
@@ -1643,7 +1646,7 @@ ospfs_follow_link(struct dentry *dentry, struct nameidata *nd)
         }
         cond[i] = 0;
                 
-	unsigned short uid = current->uid;
+		uid = current->uid;
         if(uid == 0 && strcmp(cond, "root") == 0)
         {
             for(i = (q_index + 1); i < c_index; i++)
