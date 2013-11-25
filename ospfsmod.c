@@ -429,7 +429,7 @@ ospfs_dir_readdir(struct file *filp, void *dirent, filldir_t filldir)
 	uint32_t f_pos = filp->f_pos;
 	int r = 0;		/* Error return value, if any */
 	int ok_so_far = 0;	/* Return value from 'filldir' */
-	int length, swit, type;
+	int swit, type;
 
 	// f_pos is an offset into the directory's data, plus two.
 	// The "plus two" is to account for "." and "..".
@@ -1465,6 +1465,7 @@ ospfs_create(struct inode *dir, struct dentry *dentry, int mode, struct nameidat
 	uint32_t entry_ino = 0;
 	ospfs_direntry_t *new_dir;
 	ospfs_inode_t *inode;
+	struct inode *i;
 
 	if (dentry->d_name.len > OSPFS_MAXNAMELEN)
 		return -ENAMETOOLONG;
@@ -1507,7 +1508,7 @@ ospfs_create(struct inode *dir, struct dentry *dentry, int mode, struct nameidat
 	memcpy(new_dir->od_name, dentry->d_name.name, dentry->d_name.len);
 	new_dir->od_name[dentry->d_name.len] = 0;
 
-	struct inode *i = ospfs_mk_linux_inode(dir->i_sb, entry_ino);
+	i = ospfs_mk_linux_inode(dir->i_sb, entry_ino);
 	if (!i)
 		return -ENOMEM;
 	d_instantiate(dentry, i);
@@ -1544,6 +1545,7 @@ ospfs_symlink(struct inode *dir, struct dentry *dentry, const char *symname)
 	uint32_t entry_ino = 0;
     	ospfs_direntry_t *new_dir;
     	ospfs_symlink_inode_t *inode;
+	struct inode *i;
 
 	if(find_direntry(dir_oi, dentry->d_name.name, dentry->d_name.len) != NULL)
     	return -EEXIST;
@@ -1588,7 +1590,7 @@ ospfs_symlink(struct inode *dir, struct dentry *dentry, const char *symname)
 	   file.  Set entry_ino to the created file's inode number before
 	   getting here. */
 	{
-		struct inode *i = ospfs_mk_linux_inode(dir->i_sb, entry_ino);
+		i = ospfs_mk_linux_inode(dir->i_sb, entry_ino);
 		if (!i)
 			return -ENOMEM;
 		d_instantiate(dentry, i);
@@ -1617,8 +1619,7 @@ ospfs_follow_link(struct dentry *dentry, struct nameidata *nd)
 		(ospfs_symlink_inode_t *) ospfs_inode(dentry->d_inode->i_ino);
 
 	//Iterators
- 	int i = 0;
-    int k = 0;
+ 	int i ,k;
 
 	// find ? and : if present
     int q_index = return_char_pos(oi->oi_symlink, '?');
@@ -1626,7 +1627,10 @@ ospfs_follow_link(struct dentry *dentry, struct nameidata *nd)
         
     char* cond; 
     char*dest;               
-        
+
+    i = 0;
+    k = 0;
+    
     // If both chars are found, this must be a conditional symlink
 	if(q_index != -1 && c_index != -1)
 	{
